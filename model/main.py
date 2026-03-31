@@ -51,12 +51,18 @@ def get_user_profile():
     no_dairy = input("  No dairy? ").strip().lower() == 'y'
     no_gluten = input("  Gluten-free? ").strip().lower() == 'y'
 
+    print("\nFood Preferences (comma separated, leave blank to skip):")
+    print("  e.g. chicken, rice, yogurt, salmon")
+    pref_input = input("  Your preferences: ").strip()
+    preferences = [p.strip().lower() for p in pref_input.split(',') if p.strip()]
+
     return {
         'weight_kg': weight, 'height_cm': height, 'age': age,
         'sex': sex, 'activity': activity, 'goal': goal,
         'budget': budget, 'store': store,
         'vegetarian': vegetarian, 'no_nuts': no_nuts,
-        'no_dairy': no_dairy, 'no_gluten': no_gluten
+        'no_dairy': no_dairy, 'no_gluten': no_gluten,
+        'preferences': preferences
     }
 
 
@@ -90,12 +96,19 @@ def run_optimization(profile, data_path=None):
     print(f"  Budget:   ${profile['budget']:.2f}")
 
     # Run GA
+    preferences = profile.get('preferences', [])
     ga = GroceryGA(
         data, targets, profile['budget'],
         max_qty=2, pop_size=200, generations=300,
         crossover_rate=0.85, mutation_rate=0.1,
-        tournament_size=5, elitism_count=10
+        tournament_size=5, elitism_count=10,
+        preferences=preferences
     )
+
+    if preferences:
+        matched = np.sum(ga.pref_scores > 0)
+        print(f"\nPreferences: {', '.join(preferences)}")
+        print(f"Matched items in candidate pool: {matched}")
     chrom, fitness = ga.optimize(verbose=True)
     display, summary = ga.format_result(chrom)
     print_summary(display, summary)
