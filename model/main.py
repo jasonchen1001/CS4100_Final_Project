@@ -5,6 +5,11 @@ from data_processor import load_cleaned_data, filter_by_dietary
 from nutrition_calculator import calc_weekly_targets
 from GA_optimizer import GroceryGA, print_summary
 
+def calculate_bmi(weight_kg, height_cm):
+    height_m = height_cm / 100
+    if height_m <= 0:
+        return 0
+    return weight_kg / (height_m ** 2)
 
 def get_user_profile():
     print("\n=== Grocery List Optimizer ===\n")
@@ -12,6 +17,18 @@ def get_user_profile():
     weight = float(input("Weight (kg): "))
     height = float(input("Height (cm): "))
     age = int(input("Age: "))
+    bmi = calculate_bmi(weight, height)
+    print(f"BMI: {bmi:.2f}")
+    if bmi < 18.5:
+        bmi_status = "Underweight"
+    elif bmi < 25:
+        bmi_status = "Normal"
+    elif bmi < 30:
+        bmi_status = "Overweight"
+    else:
+        bmi_status = "Obese"
+
+    print(f"BMI Category: {bmi_status}")
 
     print("\nSex:")
     print("  1. Male")

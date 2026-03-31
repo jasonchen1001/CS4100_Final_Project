@@ -35,6 +35,13 @@ def calc_weekly_targets(weight_kg, height_cm, age, sex, activity, goal):
     tdee = bmr * ACTIVITY_MULTIPLIERS[activity]
     daily_cal = tdee + GOAL_OFFSETS[goal]
 
+    bmi = weight_kg / ((height_cm / 100) ** 2)
+
+    if bmi >= 30:
+        daily_cal -= 200   # reduce calories for obese
+    elif bmi < 18.5:
+        daily_cal += 200   # increase calories for underweight
+
     # Ensure minimum daily calories
     daily_cal = max(daily_cal, 1200)
 
