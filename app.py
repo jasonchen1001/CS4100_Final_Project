@@ -33,20 +33,33 @@ st.markdown("Build a budget-aware grocery list with nutrition balance.")
 # Layout
 col1, col2 = st.columns(2)
 
-# rofile
+# Profile
 with col1:
     st.subheader("1. Profile & Goals")
 
-    weight = st.number_input("Weight (kg)", value=70.0)
-    height = st.number_input("Height (cm)", value=175.0)
+    weight = st.number_input("Weight (kg)", value=70, step=1)
+    height = st.number_input("Height (cm)", value=175, step=1)
     age = st.number_input("Age", value=22)
 
     sex = st.selectbox("Sex", ["male", "female"])
-    activity = st.selectbox("Activity", ["sedentary", "light", "moderate", "active", "very_active"])
-    goal = st.selectbox("Goal", ["lose_weight", "maintain", "gain_muscle"])
+    activity_options = {
+        "sedentary (little exercise)": "sedentary",
+        "light (1-3 days/week)": "light",
+        "moderate (3-5 days/week)": "moderate",
+        "active (6-7 days/week)": "active",
+        "very active (physical job)": "very_active"
+    }
 
-    bmi = calculate_bmi(weight, height)
-    st.markdown(f"**BMI:** {bmi:.2f} ({bmi_category(bmi)})")
+    activity_label = st.selectbox("Activity Level", list(activity_options.keys()))
+    activity = activity_options[activity_label]
+    goal_options = {
+        "Lose weight": "lose_weight",
+        "Maintain": "maintain",
+        "Gain muscle": "gain_muscle"
+    }
+
+    goal_label = st.selectbox("Goal", list(goal_options.keys()))
+    goal = goal_options[goal_label]
 
 # Budget
 with col2:
@@ -54,16 +67,118 @@ with col2:
 
     budget = st.number_input("Weekly Budget ($)", value=100.0)
 
-    vegetarian = st.checkbox("Vegetarian")
-    no_nuts = st.checkbox("No Nuts")
-    no_dairy = st.checkbox("No Dairy")
-    no_gluten = st.checkbox("No Gluten")
+    if "diet" not in st.session_state:
+        st.session_state.diet = {
+            "vegetarian": False,
+            "no_nuts": False,
+            "no_dairy": False,
+            "no_gluten": False
+        }
 
-# Preferences
-st.subheader("3. Preferences")
+    st.markdown("**Dietary Restrictions**")
 
-pref_input = st.text_input("Food preferences (comma separated)")
-preferences = [p.strip().lower() for p in pref_input.split(",") if p.strip()]
+    bcol1, bcol2 = st.columns(2)
+
+    def toggle(key):
+        st.session_state.diet[key] = not st.session_state.diet[key]
+
+    with bcol1:
+        st.button(
+            "🥦 Vegetarian",
+            use_container_width=True,
+            on_click=toggle,
+            args=("vegetarian",),
+            type="primary" if st.session_state.diet["vegetarian"] else "secondary"
+        )
+
+        st.button(
+            "🥜 No Nuts",
+            use_container_width=True,
+            on_click=toggle,
+            args=("no_nuts",),
+            type="primary" if st.session_state.diet["no_nuts"] else "secondary"
+        )
+
+    with bcol2:
+        st.button(
+            "🥛 No Dairy",
+            use_container_width=True,
+            on_click=toggle,
+            args=("no_dairy",),
+            type="primary" if st.session_state.diet["no_dairy"] else "secondary"
+        )
+
+        st.button(
+            "🌾 No Gluten",
+            use_container_width=True,
+            on_click=toggle,
+            args=("no_gluten",),
+            type="primary" if st.session_state.diet["no_gluten"] else "secondary"
+        )
+
+    vegetarian = st.session_state.diet["vegetarian"]
+    no_nuts = st.session_state.diet["no_nuts"]
+    no_dairy = st.session_state.diet["no_dairy"]
+    no_gluten = st.session_state.diet["no_gluten"]
+
+    # BMI
+    bmi = calculate_bmi(weight, height)
+    bmi_text = bmi_category(bmi)
+
+    st.markdown(f"""
+    <div style="
+        width: 92px;
+        height: 92px;
+        background: #f9fafb;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin-top: 10px;
+        margin-bottom: 10px;
+    ">
+        <div style="font-size: 24px; font-weight: 800; color: #111827; line-height: 1.1;">
+            BMI
+        </div>
+        <div style="font-size: 20px; font-weight: 600; color: #111827; margin-top: 8px; line-height: 1.1;">
+            {bmi:.2f}
+        </div>
+        <div style="font-size: 13px; color: #10b981; margin-top: 8px;">
+            {bmi_text}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+    
+    # Food preferences
+    st.markdown("### 3. Preferences")
+
+    pref_input = st.text_input(
+        "Food Preferences (e.g. chicken, rice, yogurt, salmon)"
+    )
+
+    preferences = [p.strip().lower() for p in pref_input.split(",") if p.strip()]
+
+# Store preferences
+st.subheader("Store Preferences")
+
+store_options = {
+    "All Stores": None,
+    "Target": "Target",
+    "Walmart": "Walmart",
+    "WholeFoods": "WholeFoods"
+}
+
+store_label = st.selectbox(
+    "Store Preference",
+    list(store_options.keys()),
+    label_visibility="collapsed"
+)
+store = store_options[store_label]
 
 # Run Button
 run = st.button("🚀 Generate Optimized Grocery List")
@@ -82,6 +197,9 @@ if run:
         no_dairy=no_dairy,
         no_gluten=no_gluten
     )
+
+    if store:
+        data = data[data['store'] == store]
 
     st.success(f"Dataset loaded: {len(data)} items")
 
@@ -107,16 +225,7 @@ if run:
 
         chrom, fitness = ga.optimize(verbose=False)
         display, summary = ga.format_result(chrom)
-
-    # Result Table
-    st.subheader("🛍️ Optimized Grocery List")
-
-    display = display.copy()
-    display['price'] = display['price'].round(2)
-    display['subtotal'] = display['subtotal'].round(2)
-
-    st.dataframe(display, use_container_width=True)
-
+    
     # Summary
     st.subheader("📈 Summary")
 
@@ -159,4 +268,23 @@ if run:
         columns=['Count']
     ).reset_index().rename(columns={'index': 'Category'})
 
-    st.bar_chart(cat_df.set_index("Category"))
+    st.plotly_chart(
+        {
+            "data": [{
+                "labels": cat_df["Category"],
+                "values": cat_df["Count"],
+                "type": "pie"
+            }],
+            "layout": {"margin": {"t": 0, "b": 0}}
+        },
+        use_container_width=True
+    )
+
+    # Result Table
+    st.subheader("🛍️ Optimized Grocery List")
+
+    display = display.copy()
+    display['price'] = display['price'].round(2)
+    display['subtotal'] = display['subtotal'].round(2)
+
+    st.dataframe(display, use_container_width=True)
