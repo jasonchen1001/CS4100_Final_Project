@@ -236,29 +236,6 @@ if run:
     scol3.metric("Calories", f"{summary['total_calories_kcal']:.0f}")
     scol4.metric("Protein", f"{summary['total_protein_g']:.1f}")
 
-    # Nutrition Comparison
-    st.markdown("### Nutrition vs Target")
-
-    comp_df = pd.DataFrame({
-        "Metric": ["Calories", "Protein", "Fat", "Carbs"],
-        "Actual": [
-            summary['total_calories_kcal'],
-            summary['total_protein_g'],
-            summary['total_fat_g'],
-            summary['total_carbs_g']
-        ],
-        "Target": [
-            targets['calories_kcal'],
-            targets['protein_g'],
-            targets['fat_g'],
-            targets['carbs_g']
-        ]
-    })
-
-    comp_df["% Achieved"] = (comp_df["Actual"] / comp_df["Target"] * 100).round(1)
-
-    st.dataframe(comp_df, use_container_width=True)
-
     # Category Breakdown
     st.markdown("### Category Breakdown")
 
