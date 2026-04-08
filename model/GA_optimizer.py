@@ -5,7 +5,7 @@ from collections import Counter
 # No single item should exceed this % of total budget
 MAX_ITEM_BUDGET_PCT = 0.15
 
-# Category constraints: min/max item count and max budget share per group
+# Category constraints: min/max item count and max budget share
 CATEGORY_TARGETS = {
     'meat': {'min': 3, 'max': 6, 'max_budget_pct': 0.30},
     'dairy': {'min': 3, 'max': 6, 'max_budget_pct': 0.20},
@@ -17,7 +17,7 @@ CATEGORY_TARGETS = {
 }
 
 
-# Step 0: Reduce search space by selecting top items per category
+# Preselect candidates
 def preselect_candidates(data, targets, n_per_category=20):
     data = data.copy()
     data['cal_eff'] = data['calories_kcal'] / data['price']
@@ -53,7 +53,7 @@ class GroceryGA:
         # Step 0: Build candidate pool
         self.candidates = preselect_candidates(data, targets, n_per_category)
 
-        # Force preference-matched items into candidate pool
+        # Add preference-matched items to candidate pool
         if preferences:
             existing_ids = set(self.candidates['id'])
             names = data['name'].str.lower()
@@ -81,7 +81,7 @@ class GroceryGA:
         self.candidates = self.candidates[keep].reset_index(drop=True)
         self.n_items = len(self.candidates)
 
-        # GA parameters
+        # Genetic algorithm parameters
         self.pop_size = pop_size
         self.generations = generations
         self.crossover_rate = crossover_rate
@@ -239,7 +239,7 @@ class GroceryGA:
         weighted_dev = (under + over) @ self.nutrition_weights
         nutrition_score = np.maximum(0, 40 * (1 - weighted_dev * 2))
 
-        # Step 2b: Budget penalty (hard constraint)
+        # Step 2b: Budget penalty 
         budget_penalty = np.maximum(0, total_cost - self.budget) / self.budget * 200
 
         # Step 2c: Budget utilization bonus (0-25 pts)
@@ -542,7 +542,7 @@ class GroceryGA:
         display = display.sort_values(['category', 'subtotal'], ascending=[True, False]).reset_index(drop=True)
         return display, summary
 
-
+# Print the summary
 def print_summary(display, summary):
     t = summary['targets']
     pct = lambda a, b: a / b * 100

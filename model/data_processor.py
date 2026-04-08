@@ -3,7 +3,7 @@ import re
 import html
 import os
 
-# Dietary tags based on original category names (before remapping)
+# Name the dietary tags based on original category names
 DIETARY_TAGS = {
     'non_vegetarian': {
         'meat-packaged', 'meat-poultry-wf', 'sausage-bacon',
@@ -23,7 +23,7 @@ DIETARY_TAGS = {
     }
 }
 
-# Categories to remove (low nutritional value, not core grocery items)
+# Remove some categories
 EXCLUDED_CATEGORIES = {
     'baby-food', 'spices-seasoning', 'culinary-ingredients',
     'pastry-chocolate-candy', 'cookies-biscuit', 'cakes',
@@ -36,7 +36,7 @@ EXCLUDED_CATEGORIES = {
     'canned-goods',
 }
 
-# Remap original categories into 7 groups
+# Remap original categories into categories we use
 CATEGORY_MAP = {
     'meat-packaged': 'meat', 'meat-poultry-wf': 'meat',
     'sausage-bacon': 'meat', 'jerky': 'meat',
@@ -67,6 +67,7 @@ def clean_id(item_id):
     return item_id
 
 
+# Preprocess the grocery data csv
 def preprocess_grocery_data(input_path, output_path):
     df = pd.read_csv(input_path)
     original_count = len(df)
@@ -97,11 +98,11 @@ def preprocess_grocery_data(input_path, output_path):
     df = df[(df['protein_g'] > 0) & (df['fat_g'] > 0) & (df['carbs_g'] > 0)]
     df = df[(df['protein_g'] <= 100) & (df['fat_g'] <= 100) & (df['carbs_g'] <= 100)]
 
-    # Calculate calories per 100g (4-4-9 formula) and cap at 900
+    # Calculate calories per 100g and cap at 900
     df['calories_kcal'] = (df['protein_g'] * 4 + df['carbs_g'] * 4 + df['fat_g'] * 9).round(2)
     df = df[df['calories_kcal'] <= 900]
 
-    # Tag dietary labels using ORIGINAL category names (before remapping)
+    # Tag dietary labels
     df['is_vegetarian'] = (~df['category'].isin(DIETARY_TAGS['non_vegetarian'])).astype(int)
     df['has_dairy'] = df['category'].isin(DIETARY_TAGS['contains_dairy']).astype(int)
     df['has_gluten'] = df['category'].isin(DIETARY_TAGS['likely_gluten']).astype(int)
@@ -110,24 +111,24 @@ def preprocess_grocery_data(input_path, output_path):
     # Remove unwanted categories
     df = df[~df['category'].isin(EXCLUDED_CATEGORIES)]
 
-    # Remap to 7 groups (AFTER dietary tagging, order matters)
+    # Remap to categories we use
     df['category'] = df['category'].map(CATEGORY_MAP)
     df = df.dropna(subset=['category'])
 
-    # Remove herbs/spices that slipped through in produce categories
+    # Remove herbs/spices
     herb_keywords = ['thyme', 'rosemary', 'basil', 'oregano', 'cilantro',
                      'parsley', 'dill', 'mint', 'sage', 'chives']
     herb_mask = df['name'].str.lower().str.contains('|'.join(herb_keywords), na=False)
     df = df[~herb_mask]
 
-    # Convert per-100g nutrition to per-package (actual amount per item)
+    # Convert per-100g nutrition to per-package
     weight_ratio = df['package_weight_g'] / 100
     df['total_protein_g'] = (df['protein_g'] * weight_ratio).round(2)
     df['total_fat_g'] = (df['fat_g'] * weight_ratio).round(2)
     df['total_carbs_g'] = (df['carbs_g'] * weight_ratio).round(2)
     df['total_calories_kcal'] = (df['calories_kcal'] * weight_ratio).round(2)
 
-    # Replace per-100g columns with per-package values
+    # Replace per-100g columns with per-package
     df = df.drop(columns=['protein_g', 'fat_g', 'carbs_g', 'calories_kcal'])
     df = df.rename(columns={
         'total_protein_g': 'protein_g',
@@ -154,14 +155,17 @@ def preprocess_grocery_data(input_path, output_path):
     return len(df)
 
 
+# Load the cleaned data
 def load_cleaned_data(filepath):
     return pd.read_csv(filepath)
 
 
+# Filter by store
 def filter_by_store(data, store_name):
     return data[data['store'] == store_name]
 
 
+# Filter by category
 def filter_by_category(data, category):
     return data[data['category'] == category]
 
